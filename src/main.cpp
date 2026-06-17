@@ -4,7 +4,7 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <iostream>
-#include "Shader.h"
+#include "src/Shader.h"
 
 float cubeVertices[] = {
     // Back face
