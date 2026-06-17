@@ -2,7 +2,7 @@
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     : m_Position(position), m_WorldUp(up), m_Yaw(yaw), m_Pitch(pitch),
-    m_Speed(2.5f), m_Sensitivity(0.1f) {
+    m_Speed(3.5f), m_Sensitivity(0.1f) {
     updateCameraVectors();
 }
 

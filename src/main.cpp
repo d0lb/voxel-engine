@@ -7,13 +7,15 @@
 #include "Shader.h"
 #include "Texture.h"
 #include "Camera.h"
-#include "Cube.h"
+#include "Block.h"
+#include "World.h"
+
 
 Camera* g_Camera = nullptr;
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    static float lastX = 800.0 / 2.0;
-    static float lastY = 600.0 / 2.0;
+    static float lastX = 800.0f / 2.0f;
+    static float lastY = 600.0f / 2.0f;
     static bool firstMouse = true;
 
     if (firstMouse) {
@@ -32,7 +34,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 int main() {
-    // GLFW initialization
+    // 1. Init GLFW
     if (!glfwInit()) {
         std::cerr << "GLFW init failed" << std::endl;
         return -1;
@@ -53,56 +55,60 @@ int main() {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
 
+    // 2. Load GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "GLAD init failed" << std::endl;
         return -1;
     }
 
+    // 3. Enable depth test and culling
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    // Create objects
+    // 4. Create objects
     Shader shader("src/shaders/vertex.glsl", "src/shaders/fragment.glsl");
     Texture texture("resources/textures/stone.jpg");
-    Cube cube;
-    Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+    Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));   // подняли камеру, чтобы видеть сетку
     g_Camera = &camera;
 
+    World world;   // генерирует 5x5 блоков камня
+
+    // 5. Shader setup
     shader.use();
     shader.setInt("aTexture", 0);
 
+    // 6. Projection matrix (fixed)
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
 
+    // 7. Time & rotation (now optional for world, but we can keep it)
     float lastTime = (float)glfwGetTime();
     float rotationAngle = 0.0f;
     const float rotationSpeed = glm::radians(45.0f);
     const float maxDelta = 0.05f;
 
-    // Main loop
+    // 8. Main loop
     while (!glfwWindowShouldClose(window)) {
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
         if (deltaTime > maxDelta) deltaTime = maxDelta;
         lastTime += deltaTime;
 
-        // Keyboard input
+        // Camera movement
         glm::vec3 moveDir(0.0f);
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir += camera.getFront();
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= camera.getFront();
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
         if (glm::length(moveDir) > 0.0f) {
             moveDir = glm::normalize(moveDir);
             camera.processKeyboardMovement(moveDir, deltaTime);
         }
 
-        // Rotate cube
-        rotationAngle += rotationSpeed * deltaTime;
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+        // (Optional) rotate the whole world? Not needed, but we can keep angle for fun
+        // We'll just not use rotationAngle for blocks, each block has its own position.
 
         // Render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -110,10 +116,10 @@ int main() {
         shader.use();
         shader.setMat4("uProjection", glm::value_ptr(projection));
         shader.setMat4("uView", glm::value_ptr(camera.getViewMatrix()));
-        shader.setMat4("uModel", glm::value_ptr(model));
+        // uModel is set inside each Block::draw()
 
         texture.bind(0);
-        cube.draw();
+        world.draw(shader);   // draws all blocks
 
         glfwSwapBuffers(window);
         glfwPollEvents();
