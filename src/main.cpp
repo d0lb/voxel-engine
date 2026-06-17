@@ -9,9 +9,11 @@
 #include "Camera.h"
 #include "Block.h"
 #include "World.h"
-
+#include <cstdlib>
+#include <ctime>
 
 Camera* g_Camera = nullptr;
+
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     static float lastX = 800.0f / 2.0f;
@@ -34,6 +36,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 int main() {
+
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    unsigned int seed = std::rand();
     if (!glfwInit()) {
         std::cerr << "GLFW init failed" << std::endl;
         return -1;
@@ -42,7 +47,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Voxel Engine", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Voxel Engine", nullptr, nullptr);
     if (!window) {
         std::cerr << "Window creation failed" << std::endl;
         glfwTerminate();
@@ -66,16 +71,18 @@ int main() {
 
     Shader shader("src/shaders/vertex.glsl", "src/shaders/fragment.glsl");
     Texture atlas("resources/textures/atlas.png");
-    Camera camera(glm::vec3(0.0f, 5.0f, 8.0f));
+    Camera camera(glm::vec3(0.0f, 130.0f, 8.0f));
     g_Camera = &camera;
+    camera.setSpeed(25.0f);
+    camera.processMouseMovement(0.0f, 70.0f);
 
-    World world;
+    World world(seed);
 
     shader.use();
     shader.setInt("uAtlas", 0);  // use texture unit 0
 
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1920.0f / 1080.0f, 0.1f, 1000.0f);
+    camera.setProjection(projection);
     float lastTime = (float)glfwGetTime();
     const float maxDelta = 0.05f;
 
@@ -91,20 +98,23 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= camera.getFront();
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
         if (glm::length(moveDir) > 0.0f) {
             moveDir = glm::normalize(moveDir);
             camera.processKeyboardMovement(moveDir, deltaTime);
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        camera.extractFrustumPlanes();
+
 
         shader.use();
         shader.setMat4("uProjection", glm::value_ptr(projection));
         shader.setMat4("uView", glm::value_ptr(camera.getViewMatrix()));
 
         atlas.bind(0);
+        world.update(camera.getPosition());
         world.draw(shader);
 
         glfwSwapBuffers(window);

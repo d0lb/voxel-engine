@@ -3,39 +3,35 @@ out vec4 FragColor;
 
 in vec2 vUV;
 flat in float vFaceIndex;
+flat in float vBlockType;   // block type id passed from vertex shader
 
-uniform int uBlockType;
 uniform sampler2D uAtlas;
 
-// Atlas: 4x4 tiles, each 32x32 pixels (128x128 total)
 const int TILES_PER_ROW = 4;
 const float TILE_SIZE = 1.0 / float(TILES_PER_ROW);
-const float BIAS = 0.01; // small offset to avoid edge artifacts
+const float BIAS = 0.01;
 
-// Map block type + face index -> tile index
 int getTileIndex(int blockType, int face) {
-    if (blockType == 0) return 0; // Stone
-    if (blockType == 1) {         // Grass
-        if (face == 0) return 1;   // top
-        if (face == 1) return 3;   // bottom (dirt)
-        return 2;                  // sides (grass_side)
+    if (blockType == 0) return 0; // stone
+    if (blockType == 1) {         // grass
+        if (face == 0) return 1;  // top
+        if (face == 1) return 3;  // bottom (dirt)
+        return 2;                 // side
     }
-    if (blockType == 2) return 3; // Dirt
-    if (blockType == 3) return 4; // Sand
-    if (blockType == 4) return 5; // Water
-    return 0; // fallback
+    if (blockType == 2) return 3; // dirt
+    if (blockType == 3) return 4; // sand
+    if (blockType == 4) return 5; // water
+    return 0;
 }
 
 void main() {
     int face = int(vFaceIndex);
-    int tileIdx = getTileIndex(uBlockType, face);
+    int tileIdx = getTileIndex(int(vBlockType), face);
 
-    // Compute tile offset in atlas
     float tileX = float(tileIdx % TILES_PER_ROW) * TILE_SIZE;
     float tileY = float(tileIdx / TILES_PER_ROW) * TILE_SIZE;
 
-
-    vec2 uv = vUV * (TILE_SIZE - 2.0 * BIAS) + BIAS;
+    vec2 uv = vUV * (TILE_SIZE - 2.0 * BIAS) + BIAS; // shrink to avoid bleeding
     vec2 atlasUV = vec2(tileX, tileY) + uv;
 
     vec4 texColor = texture(uAtlas, atlasUV);

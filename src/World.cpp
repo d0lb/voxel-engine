@@ -1,54 +1,72 @@
 #include "World.h"
-#include <glad/glad.h>
-#include <glm.hpp> 
+#include "Camera.h"
 
-World::World() {
-    generateWorld();
-}
+extern Camera* g_Camera;
+
+World::World(unsigned int seed) : m_Generator(seed) { }
 
 World::~World() {}
 
-void World::generateWorld() {
-    int worldSize = 16; // 16x16 blocks
-    float waterRadius = 3.0f;
-    float sandRadius = 4.0f;
+void World::update(const glm::vec3& cameraPos) {
+    
+    int camChunkX = static_cast<int>(floor(cameraPos.x / Chunk::SIZE));
+    int camChunkZ = static_cast<int>(floor(cameraPos.z / Chunk::SIZE));
 
-    for (int x = -worldSize / 2; x < worldSize / 2; ++x) {
-        for (int z = -worldSize / 2; z < worldSize / 2; ++z) {
-            // Calculate distance from center (0,0)
-            float dist = glm::distance(glm::vec2(x, z), glm::vec2(0.0f, 0.0f));
-
-            // Determine surface block type
-            BlockType surfaceType;
-            if (dist <= waterRadius) {
-                surfaceType = BlockType::Water;
+   
+    for (int dx = -m_ViewDistance; dx <= m_ViewDistance; ++dx) {
+        for (int dz = -m_ViewDistance; dz <= m_ViewDistance; ++dz) {
+            int cx = camChunkX + dx;
+            int cz = camChunkZ + dz;
+            ChunkCoord key{ cx, cz };
+            if (m_Chunks.find(key) == m_Chunks.end()) {
+                loadChunk(cx, cz);
             }
-            else if (dist <= sandRadius) {
-                surfaceType = BlockType::Sand;
-            }
-            else {
-                surfaceType = BlockType::Grass;
-            }
+        }
+    }
 
-            // Place surface block at y=0
-            glm::vec3 surfacePos(static_cast<float>(x), 0.0f, static_cast<float>(z));
-            m_Blocks.emplace_back(surfaceType, surfacePos);
-
-            // Place dirt layer at y=-1 (under everything)
-            glm::vec3 dirtPos(static_cast<float>(x), -1.0f, static_cast<float>(z));
-            m_Blocks.emplace_back(BlockType::Dirt, dirtPos);
-
-            // Place two stone layers at y=-2 and y=-3
-            glm::vec3 stonePos1(static_cast<float>(x), -2.0f, static_cast<float>(z));
-            m_Blocks.emplace_back(BlockType::Stone, stonePos1);
-            glm::vec3 stonePos2(static_cast<float>(x), -3.0f, static_cast<float>(z));
-            m_Blocks.emplace_back(BlockType::Stone, stonePos2);
+    
+    auto it = m_Chunks.begin();
+    while (it != m_Chunks.end()) {
+        int cx = it->first.x;
+        int cz = it->first.z;
+        if (abs(cx - camChunkX) > m_ViewDistance + 1 || abs(cz - camChunkZ) > m_ViewDistance + 1) {
+            it = m_Chunks.erase(it);
+        }
+        else {
+            ++it;
         }
     }
 }
 
 void World::draw(const Shader& shader) const {
-    for (const auto& block : m_Blocks) {
-        block.draw(shader);
+    for (const auto& pair : m_Chunks) {
+        Chunk& chunk = *pair.second;
+        int wx = chunk.getChunkX() * Chunk::SIZE;
+        int wz = chunk.getChunkZ() * Chunk::SIZE;
+        glm::vec3 min(wx, 0, wz);
+        glm::vec3 max(wx + Chunk::SIZE, Chunk::HEIGHT, wz + Chunk::SIZE);
+        if (g_Camera && !g_Camera->isAABBVisible(min, max))
+            continue;
+        chunk.draw(shader);
     }
+}
+
+Chunk* World::getChunk(int chunkX, int chunkZ) {
+    ChunkCoord key{ chunkX, chunkZ };
+    auto it = m_Chunks.find(key);
+    if (it != m_Chunks.end()) {
+        return it->second.get();
+    }
+    return nullptr;
+}
+
+void World::loadChunk(int chunkX, int chunkZ) {
+    auto chunk = std::make_unique<Chunk>(chunkX, chunkZ);
+    m_Generator.generate(*chunk);
+    chunk->buildMesh();
+    m_Chunks[{chunkX, chunkZ}] = std::move(chunk);
+}
+
+void World::unloadChunk(int chunkX, int chunkZ) {
+    m_Chunks.erase({ chunkX, chunkZ });
 }
