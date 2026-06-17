@@ -1,35 +1,100 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include "../dependencies/stb_image.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <iostream>
-#include "src/Shader.h"
+#include "Shader.h"
 
 float cubeVertices[] = {
     // Back face
-    -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
-     // Front face
-     -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,
-      0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f,
-      // Left face
-      -0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
-      -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f,
-      // Right face
-       0.5f,  0.5f,  0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f, -0.5f,
-       0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,
-       // Bottom face
-       -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,
-        0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f,
-        // Top face
-        -0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+    // Front face
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    // Left face
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+    // Right face
+     0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+     // Bottom face
+     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
+      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
+     -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
+     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+     // Top face
+     -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+     -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+      0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+     -0.5f,  0.5f, -0.5f,  0.0f, 0.0f
 };
+
+unsigned int loadTexture(const char* path) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+    if (data) {
+        GLenum format;
+        if (nrChannels == 1)
+            format = GL_RED;
+        else if (nrChannels == 3)
+            format = GL_RGB;
+        else if (nrChannels == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        // Texture wrapping and filtering
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+    else {
+        std::cout << "Failed to load texture: " << path << std::endl;
+    }
+    stbi_image_free(data);
+    return textureID;
+}
+
+
 
 int main() {
     if (!glfwInit()) {
-        std::cerr << "GLFW initialization failed" << std::endl;
+        std::cerr << "GLFW init failed" << std::endl;
         return -1;
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -45,10 +110,14 @@ int main() {
     glfwMakeContextCurrent(window);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr << "GLAD initialization failed" << std::endl;
+        std::cerr << "GLAD init failed" << std::endl;
         return -1;
     }
 
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
     Shader shader("src/shaders/vertex.glsl", "src/shaders/fragment.glsl");
 
     unsigned int VAO, VBO;
@@ -58,44 +127,59 @@ int main() {
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // Texture coordinate attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    float offsetX = 0.0f, offsetY = 0.0f, offsetZ = -1.5f;
-    float r = 0.8f, g = 0.4f, b = 0.2f;
-
-    // Create perspective projection matrix (45° FOV, aspect ratio 800/600)
+    // Projection & View (fixed)
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-    // View matrix: camera at (0,0,3) looking at origin
     glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    while (!glfwWindowShouldClose(window)) {
-        // Input
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) offsetY += 0.02f;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) offsetY -= 0.02f;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) offsetX -= 0.02f;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) offsetX += 0.02f;
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) offsetZ += 0.02f;
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) offsetZ -= 0.02f;
+    float lastTime = (float)glfwGetTime();
+    float rotationAngle = 0.0f;
+    const float rotationSpeed = glm::radians(45.0f); // 45° per second
+    const float maxDelta = 0.05f; // 50 ms max step to avoid jumps
 
-        // Build model matrix from offset
+    unsigned int texture = loadTexture("resources/textures/stone.jpg");
+    shader.use();
+    shader.setInt("aTexture", 0);
+
+    while (!glfwWindowShouldClose(window)) {
+        float currentTime = (float)glfwGetTime();
+        float deltaTime = currentTime - lastTime;
+
+        // Clamp delta to avoid large jumps when window was dragged
+        if (deltaTime > maxDelta) {
+            deltaTime = maxDelta;
+        }
+
+        // Advance lastTime only by the used amount to keep the remaining time
+        lastTime += deltaTime;
+
+        // Update rotation
+        rotationAngle += rotationSpeed * deltaTime;
+
+        // Model matrix: rotate around Y
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(offsetX, offsetY, offsetZ));
-        // Adds rotation for demonstration
-        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 
         // Render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
         shader.setMat4("uProjection", glm::value_ptr(projection));
         shader.setMat4("uView", glm::value_ptr(view));
         shader.setMat4("uModel", glm::value_ptr(model));
-        shader.setVec3("uColor", 1, 0.5, 1);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
