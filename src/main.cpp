@@ -1,98 +1,38 @@
-#define STB_IMAGE_IMPLEMENTATION
-#include "../dependencies/stb_image.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
-#include <gtc/type_ptr.hpp>
+#include <gtc/type_ptr.hpp>   
 #include <iostream>
 #include "Shader.h"
+#include "Texture.h"
+#include "Camera.h"
+#include "Cube.h"
 
-float cubeVertices[] = {
-    // Back face
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+Camera* g_Camera = nullptr;
 
-    // Front face
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    static float lastX = 800.0 / 2.0;
+    static float lastY = 600.0 / 2.0;
+    static bool firstMouse = true;
 
-    // Left face
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-    // Right face
-     0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-     // Bottom face
-     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-      0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-     -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-     // Top face
-     -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
-     -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-      0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-      0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-      0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-     -0.5f,  0.5f, -0.5f,  0.0f, 0.0f
-};
-
-unsigned int loadTexture(const char* path) {
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
-    if (data) {
-        GLenum format;
-        if (nrChannels == 1)
-            format = GL_RED;
-        else if (nrChannels == 3)
-            format = GL_RGB;
-        else if (nrChannels == 4)
-            format = GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        // Texture wrapping and filtering
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (firstMouse) {
+        lastX = (float)xpos;
+        lastY = (float)ypos;
+        firstMouse = false;
     }
-    else {
-        std::cout << "Failed to load texture: " << path << std::endl;
-    }
-    stbi_image_free(data);
-    return textureID;
+
+    float xoffset = (float)xpos - lastX;
+    float yoffset = lastY - (float)ypos;
+    lastX = (float)xpos;
+    lastY = (float)ypos;
+
+    if (g_Camera)
+        g_Camera->processMouseMovement(xoffset, yoffset);
 }
 
-
-
 int main() {
+    // GLFW initialization
     if (!glfwInit()) {
         std::cerr << "GLFW init failed" << std::endl;
         return -1;
@@ -108,6 +48,10 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(0);
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "GLAD init failed" << std::endl;
@@ -117,79 +61,64 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
+
+    // Create objects
     Shader shader("src/shaders/vertex.glsl", "src/shaders/fragment.glsl");
+    Texture texture("resources/textures/stone.jpg");
+    Cube cube;
+    Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+    g_Camera = &camera;
 
-    unsigned int VAO, VBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // Texture coordinate attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    // Projection & View (fixed)
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-    float lastTime = (float)glfwGetTime();
-    float rotationAngle = 0.0f;
-    const float rotationSpeed = glm::radians(45.0f); // 45° per second
-    const float maxDelta = 0.05f; // 50 ms max step to avoid jumps
-
-    unsigned int texture = loadTexture("resources/textures/stone.jpg");
     shader.use();
     shader.setInt("aTexture", 0);
 
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+    float lastTime = (float)glfwGetTime();
+    float rotationAngle = 0.0f;
+    const float rotationSpeed = glm::radians(45.0f);
+    const float maxDelta = 0.05f;
+
+    // Main loop
     while (!glfwWindowShouldClose(window)) {
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
-
-        // Clamp delta to avoid large jumps when window was dragged
-        if (deltaTime > maxDelta) {
-            deltaTime = maxDelta;
-        }
-
-        // Advance lastTime only by the used amount to keep the remaining time
+        if (deltaTime > maxDelta) deltaTime = maxDelta;
         lastTime += deltaTime;
 
-        // Update rotation
-        rotationAngle += rotationSpeed * deltaTime;
+        // Keyboard input
+        glm::vec3 moveDir(0.0f);
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir += camera.getFront();
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= camera.getFront();
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glm::length(moveDir) > 0.0f) {
+            moveDir = glm::normalize(moveDir);
+            camera.processKeyboardMovement(moveDir, deltaTime);
+        }
 
-        // Model matrix: rotate around Y
+        // Rotate cube
+        rotationAngle += rotationSpeed * deltaTime;
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::rotate(model, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 
         // Render
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
         shader.setMat4("uProjection", glm::value_ptr(projection));
-        shader.setMat4("uView", glm::value_ptr(view));
+        shader.setMat4("uView", glm::value_ptr(camera.getViewMatrix()));
         shader.setMat4("uModel", glm::value_ptr(model));
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
-
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        texture.bind(0);
+        cube.draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
     glfwTerminate();
     return 0;
 }
