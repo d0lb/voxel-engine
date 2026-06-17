@@ -1,11 +1,13 @@
 #pragma once
 #include <glm.hpp>
-#include <gtc/type_ptr.hpp>
 #include "Shader.h"
 
 enum class BlockType {
-    Stone
-    // Grass, Dirt, Wood... add later
+    Stone,
+    Grass,
+    Dirt,
+    Sand,
+    Water
 };
 
 class Block {
@@ -15,12 +17,10 @@ public:
 
     void draw(const Shader& shader) const;
 
-    // Getters / setters
     glm::vec3 getPosition() const { return m_Position; }
     void setPosition(const glm::vec3& pos) { m_Position = pos; }
     BlockType getType() const { return m_Type; }
 
-    // Durability (placeholder)
     float getDurability() const;
 
 private:

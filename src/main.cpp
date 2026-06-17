@@ -34,7 +34,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 int main() {
-    // 1. Init GLFW
     if (!glfwInit()) {
         std::cerr << "GLFW init failed" << std::endl;
         return -1;
@@ -55,39 +54,31 @@ int main() {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
 
-    // 2. Load GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "GLAD init failed" << std::endl;
         return -1;
     }
 
-    // 3. Enable depth test and culling
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    // 4. Create objects
     Shader shader("src/shaders/vertex.glsl", "src/shaders/fragment.glsl");
-    Texture texture("resources/textures/stone.jpg");
-    Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));   // подняли камеру, чтобы видеть сетку
+    Texture atlas("resources/textures/atlas.png");
+    Camera camera(glm::vec3(0.0f, 5.0f, 8.0f));
     g_Camera = &camera;
 
-    World world;   // генерирует 5x5 блоков камня
+    World world;
 
-    // 5. Shader setup
     shader.use();
-    shader.setInt("aTexture", 0);
+    shader.setInt("uAtlas", 0);  // use texture unit 0
 
-    // 6. Projection matrix (fixed)
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
 
-    // 7. Time & rotation (now optional for world, but we can keep it)
     float lastTime = (float)glfwGetTime();
-    float rotationAngle = 0.0f;
-    const float rotationSpeed = glm::radians(45.0f);
     const float maxDelta = 0.05f;
 
-    // 8. Main loop
     while (!glfwWindowShouldClose(window)) {
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
@@ -100,26 +91,21 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= camera.getFront();
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += glm::normalize(glm::cross(camera.getFront(), camera.getUp()));
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) moveDir += glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) moveDir -= glm::vec3(0.0f, 1.0f, 0.0f);
         if (glm::length(moveDir) > 0.0f) {
             moveDir = glm::normalize(moveDir);
             camera.processKeyboardMovement(moveDir, deltaTime);
         }
 
-        // (Optional) rotate the whole world? Not needed, but we can keep angle for fun
-        // We'll just not use rotationAngle for blocks, each block has its own position.
-
-        // Render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
         shader.setMat4("uProjection", glm::value_ptr(projection));
         shader.setMat4("uView", glm::value_ptr(camera.getViewMatrix()));
-        // uModel is set inside each Block::draw()
 
-        texture.bind(0);
-        world.draw(shader);   // draws all blocks
+        atlas.bind(0);
+        world.draw(shader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
