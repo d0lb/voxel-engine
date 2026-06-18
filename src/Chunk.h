@@ -1,6 +1,7 @@
 #pragma once
 #include <glm.hpp>
 #include <vector>
+#include <functional>
 #include "Block.h"
 #include "Shader.h"
 
@@ -12,7 +13,7 @@ public:
     Chunk(int chunkX, int chunkZ);
     ~Chunk();
 
-    void buildMesh();
+    void buildMesh(const std::function<BlockType(int, int, int)>& getWorldBlock);
     void draw(const Shader& shader) const;
     void markDirty() { m_Dirty = true; }
 
@@ -31,9 +32,7 @@ private:
     unsigned int m_VertexCount;
 
     void addFace(std::vector<float>& vertices,
-        float x, float y, float z,   // block center pos
-        int face,                    // 0=top,1=bottom,2=front,3=back,4=left,5=right
+        float x, float y, float z,
+        int face,
         BlockType type);
-
-    bool isAir(int x, int y, int z) const;
 };

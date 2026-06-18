@@ -38,6 +38,16 @@ void World::update(const glm::vec3& cameraPos) {
     }
 }
 
+BlockType World::getBlock(int worldX, int worldY, int worldZ) {
+    int cx = static_cast<int>(floor((float)worldX / Chunk::SIZE));
+    int cz = static_cast<int>(floor((float)worldZ / Chunk::SIZE));
+    Chunk* chunk = getChunk(cx, cz);
+    if (!chunk) return BlockType::Air;
+    int localX = worldX - cx * Chunk::SIZE;
+    int localZ = worldZ - cz * Chunk::SIZE;
+    return chunk->getBlock(localX, worldY, localZ);
+}
+
 void World::draw(const Shader& shader) const {
     for (const auto& pair : m_Chunks) {
         Chunk& chunk = *pair.second;
@@ -63,7 +73,9 @@ Chunk* World::getChunk(int chunkX, int chunkZ) {
 void World::loadChunk(int chunkX, int chunkZ) {
     auto chunk = std::make_unique<Chunk>(chunkX, chunkZ);
     m_Generator.generate(*chunk);
-    chunk->buildMesh();
+    chunk->buildMesh([this](int wx, int wy, int wz) {
+        return this->getBlock(wx, wy, wz);
+        });
     m_Chunks[{chunkX, chunkZ}] = std::move(chunk);
 }
 

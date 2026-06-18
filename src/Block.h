@@ -8,7 +8,9 @@ enum class BlockType {
     Dirt,
     Sand,
     Water,
-    Air
+    Air,
+    Wood,
+    Leaves
 };
 
 class Block {

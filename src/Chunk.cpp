@@ -1,6 +1,8 @@
 #include "Chunk.h"
 #include <glad/glad.h>
 #include <gtc/type_ptr.hpp>
+#include <array>
+
 Chunk::Chunk(int chunkX, int chunkZ)
     : m_ChunkX(chunkX), m_ChunkZ(chunkZ), m_Dirty(true) {
     // fill with air
@@ -17,12 +19,6 @@ Chunk::Chunk(int chunkX, int chunkZ)
 Chunk::~Chunk() {
     glDeleteVertexArrays(1, &m_VAO);
     glDeleteBuffers(1, &m_VBO);
-}
-
-bool Chunk::isAir(int x, int y, int z) const {
-    if (x < 0 || x >= SIZE || y < 0 || y >= HEIGHT || z < 0 || z >= SIZE)
-        return true; // outside chunk -> treat as air
-    return m_Blocks[x][y][z] == BlockType::Air;
 }
 
 void Chunk::addFace(std::vector<float>& vertices,
@@ -82,9 +78,14 @@ void Chunk::addFace(std::vector<float>& vertices,
     }
 }
 
-void Chunk::buildMesh() {
+void Chunk::buildMesh(const std::function<BlockType(int, int, int)>& getWorldBlock) {
     std::vector<float> vertices;
-    vertices.reserve(SIZE * HEIGHT * SIZE * 6 * 6 * 7); // rough estimate
+    vertices.reserve(SIZE * HEIGHT * SIZE * 6 * 6 * 7);
+
+    // predicate: block is opaque (not Air and not Water)
+    auto isSolid = [](BlockType t) {
+        return t != BlockType::Air && t != BlockType::Water;
+        };
 
     for (int x = 0; x < SIZE; ++x) {
         for (int y = 0; y < HEIGHT; ++y) {
@@ -96,13 +97,35 @@ void Chunk::buildMesh() {
                 float wy = (float)y;
                 float wz = (float)(m_ChunkZ * SIZE + z);
 
-                // only add faces that touch air or chunk border
-                if (isAir(x, y + 1, z)) addFace(vertices, wx, wy, wz, 0, type);
-                if (isAir(x, y - 1, z)) addFace(vertices, wx, wy, wz, 1, type);
-                if (isAir(x, y, z + 1)) addFace(vertices, wx, wy, wz, 2, type);
-                if (isAir(x, y, z - 1)) addFace(vertices, wx, wy, wz, 3, type);
-                if (isAir(x - 1, y, z)) addFace(vertices, wx, wy, wz, 4, type);
-                if (isAir(x + 1, y, z)) addFace(vertices, wx, wy, wz, 5, type);
+                // determines whether a face should be drawn:
+                // draw if neighbor is Air OR (neighbor is Water and current block is solid) OR (neighbor is solid but different type)
+                auto shouldDrawFace = [&](int nx, int ny, int nz) {
+                    BlockType neighbor;
+                    if (nx >= 0 && nx < SIZE && ny >= 0 && ny < HEIGHT && nz >= 0 && nz < SIZE)
+                        neighbor = m_Blocks[nx][ny][nz];
+                    else {
+                        int worldX = m_ChunkX * SIZE + nx;
+                        int worldZ = m_ChunkZ * SIZE + nz;
+                        neighbor = getWorldBlock(worldX, ny, worldZ);
+                    }
+                    if (neighbor == BlockType::Air) return true;
+                    // both solid: skip face if same type, draw if different
+                    if (isSolid(type) && isSolid(neighbor)) {
+                        return type != neighbor; // boundary between different solid blocks
+                    }
+                    // one solid, one water — draw
+                    if (isSolid(type) && neighbor == BlockType::Water) return true;
+                    if (type == BlockType::Water && isSolid(neighbor)) return true;
+                    // water-water: not drawn (water is transparent, internal water faces are invisible)
+                    return false;
+                    };
+
+                if (shouldDrawFace(x, y + 1, z)) addFace(vertices, wx, wy, wz, 0, type);
+                if (shouldDrawFace(x, y - 1, z)) addFace(vertices, wx, wy, wz, 1, type);
+                if (shouldDrawFace(x, y, z + 1)) addFace(vertices, wx, wy, wz, 2, type);
+                if (shouldDrawFace(x, y, z - 1)) addFace(vertices, wx, wy, wz, 3, type);
+                if (shouldDrawFace(x - 1, y, z)) addFace(vertices, wx, wy, wz, 4, type);
+                if (shouldDrawFace(x + 1, y, z)) addFace(vertices, wx, wy, wz, 5, type);
             }
         }
     }
@@ -114,7 +137,6 @@ void Chunk::buildMesh() {
         vertices.data(),
         GL_STATIC_DRAW);
 
-    // vertex layout: pos(3), uv(2), faceIdx(1), blockType(1) -> 7 floats
     const size_t stride = 7 * sizeof(float);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);

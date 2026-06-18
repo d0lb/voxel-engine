@@ -21,6 +21,8 @@ int getTileIndex(int blockType, int face) {
     if (blockType == 2) return 3; // dirt
     if (blockType == 3) return 4; // sand
     if (blockType == 4) return 5; // water
+    if (blockType == 6) return 6; // Wood -> stone texture (placeholder)
+    if (blockType == 7) return 7; // Leaves -> grass top (placeholder)
     return 0;
 }
 

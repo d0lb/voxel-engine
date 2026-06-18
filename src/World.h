@@ -26,7 +26,7 @@ public:
 
     void update(const glm::vec3& cameraPos);
     void draw(const Shader& shader) const;
-
+    BlockType getBlock(int worldX, int worldY, int worldZ);
     Chunk* getChunk(int chunkX, int chunkZ);
 
 private:

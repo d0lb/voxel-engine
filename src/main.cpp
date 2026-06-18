@@ -81,7 +81,7 @@ int main() {
     shader.use();
     shader.setInt("uAtlas", 0);  // use texture unit 0
 
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1920.0f / 1080.0f, 0.1f, 1000.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 1000.0f);
     camera.setProjection(projection);
     float lastTime = (float)glfwGetTime();
     const float maxDelta = 0.05f;
